@@ -644,32 +644,63 @@ module Rust =
 module Go =
     open Fable.Transforms.Go
 
-    type GoWriter(com: Compiler, cliArgs: CliArgs, pathResolver, targetPath: string) =
+    type GoWriter
+        (com: Compiler, cliArgs: CliArgs, pathResolver, targetPath: string)
+        =
         let sourcePath = com.CurrentFile
         let fileExt = cliArgs.CompilerOptions.FileExtension
         let stream = new IO.StreamWriter(targetPath)
+
         interface Printer.Writer with
             member _.Write(str) =
                 stream.WriteAsync(str) |> Async.AwaitTask
+
             member _.MakeImportPath(path) =
                 let projDir = IO.Path.GetDirectoryName(cliArgs.ProjectFile)
-                let path = Imports.getImportPath pathResolver sourcePath targetPath projDir cliArgs.OutDir path
-                if path.EndsWith(".fs") then Path.ChangeExtension(path, fileExt) else path
-            member _.AddSourceMapping _ = ()
+
+                let path =
+                    Imports.getImportPath
+                        pathResolver
+                        sourcePath
+                        targetPath
+                        projDir
+                        cliArgs.OutDir
+                        path
+
+                if path.EndsWith(".fs") then
+                    Path.ChangeExtension(path, fileExt)
+                else
+                    path
+
+            member _.AddSourceMapping(_, _, _, _, _, _) = ()
+
             member _.AddLog(msg, severity, ?range) =
-                com.AddLog(msg, severity, ?range=range, fileName=com.CurrentFile)
+                com.AddLog(
+                    msg,
+                    severity,
+                    ?range = range,
+                    fileName = com.CurrentFile
+                )
+
             member _.Dispose() = stream.Dispose()
 
-    let compileFile (com: Compiler) (cliArgs: CliArgs) pathResolver isSilent (outPath: string) = async {
-        let crate =
-            FSharp2Fable.Compiler.transformFile com
-            |> FableTransforms.transformFile com
-            |> Fable2Go.Compiler.transformFile com
+    let compileFile
+        (com: Compiler)
+        (cliArgs: CliArgs)
+        pathResolver
+        isSilent
+        (outPath: string)
+        =
+        async {
+            let crate =
+                FSharp2Fable.Compiler.transformFile com
+                |> FableTransforms.transformFile com
+                |> Fable2Go.Compiler.transformFile com
 
-        if not (isSilent || GoPrinter.isEmpty crate) then
-            use writer = new GoWriter(com, cliArgs, pathResolver, outPath)
-            do! GoPrinter.run writer crate
-    }
+            if not (isSilent || GoPrinter.isEmpty crate) then
+                use writer = new GoWriter(com, cliArgs, pathResolver, outPath)
+                do! GoPrinter.run writer crate
+        }
 
 let compileFile
     (com: Compiler)

@@ -389,6 +389,7 @@ type Runner =
                         | Python -> "FABLE_COMPILER_PYTHON"
                         | TypeScript -> "FABLE_COMPILER_TYPESCRIPT"
                         | JavaScript -> "FABLE_COMPILER_JAVASCRIPT"
+                        | Go -> "FABLE_COMPILER_GO"
                     ]
                 |> List.distinct
 
@@ -563,7 +564,8 @@ let getLibPkgVersion =
     | Python
     | Rust
     | Dart
-    | Php -> None
+    | Php
+    | Go -> None
 
 [<EntryPoint>]
 let main argv =
