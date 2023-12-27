@@ -39,6 +39,12 @@ type Time =
     static member inline duration(value: {| from: int; until: int |}) = value.until - value.from
     static member inline duration(value: {| from: int |}) = Time.duration {| value with until = 10 |}
 
+type CarInterior = { Seats: int }
+type Car = { Interior: CarInterior }
+
+type RecordA =
+    { OptionalField : string option }
+
 [<Fact>]
 let ``test Anonymous records work`` () =
     let r = makeAnonRec()
@@ -125,3 +131,30 @@ let ``test Mutating records work`` () =
     let x'' = { x' with uniqueA = -10 }
     equal -10 x''.uniqueA
     equal -20 x''.uniqueB
+
+[<Fact>]
+let ``test Nested record field copy and update works for records`` =
+    let car =
+        { Interior = { Seats = 4 } }
+    let car2 =
+        { car with Interior.Seats = 5 }
+    equal 5 car2.Interior.Seats
+
+[<Fact>]
+let ``test Nested record field copy and update works for anonymous records`` =
+    let car =
+        {| Interior = {| Seats = 4 |} |}
+    let car2 =
+        {| car with Interior.Seats = 5 |}
+    equal 5 car2.Interior.Seats
+
+[<Fact>]
+let ``test Record equality when it has optional field`` =
+    let a = { OptionalField = None }
+    let b = { OptionalField = None }
+    let c = { OptionalField = Some "test" }
+
+    equal a b
+    equal true (a = b)
+    equal false (a = c)
+    equal false (c = b)

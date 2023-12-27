@@ -19,6 +19,15 @@ let LINE_SEPARATOR = "\u2028"
 let [<Literal>] aLiteral = "foo"
 let notALiteral = "foo"
 
+[<Literal>]
+let formatCoordinateBody = "(%f,%f)"
+
+[<Literal>]
+let formatPrefix = "Person at coordinates"
+
+[<Literal>]
+let fullFormat = formatPrefix + formatCoordinateBody
+
 type MyUnion = Bar of int * int | Foo1 of float | Foo3 | Foo4 of MyUnion
 
 type Test(i: int) =
@@ -160,6 +169,13 @@ let tests =
           sprintf "%d" -1L |> equal "-1"
           sprintf "%.2f" -1. |> equal "-1.00"
 
+      testCase "format string can use and compose string literals" <| fun () ->
+            let renderedCoordinates = sprintf formatCoordinateBody 0.25 0.75
+            let renderedText = sprintf fullFormat 0.25 0.75
+
+            equal "(0.250000,0.750000)" renderedCoordinates
+            equal "Person at coordinates(0.250000,0.750000)" renderedText
+
       testCase "Print.sprintf works" <| fun () -> // See #1216
             let res = Printf.sprintf "%s" "abc"
             equal "res: abc" ("res: " + res)
@@ -287,6 +303,11 @@ let tests =
             let b = B()
             $"b=(%O{b})" |> equal "b=(a=6)"
             $"%O{b}%O{b}" |> equal "a=7a=8"
+
+      testCase "Extended string interpolation syntax" <| fun () ->
+            let classAttr = "item-panel"
+            let cssNew = $$""".{{classAttr}}:hover {background-color: #eee;}"""
+            cssNew |> equal ".item-panel:hover {background-color: #eee;}"
 
       testCase "sprintf \"%A\" with lists works" <| fun () ->
             let xs = ["Hi"; "Hello"; "Hola"]
@@ -698,12 +719,28 @@ let tests =
             "abcdbc".IndexOf('b', 3)
             |> equal 4
 
+      testCase "String.IndexOf with StringComparison" <| fun () ->
+            "abcdbc".IndexOf("b", StringComparison.Ordinal)
+            |> equal 1
+
+      testCase "String.IndexOf with index and StringComparison" <| fun () ->
+            "abcdbc".IndexOf("b", 3, StringComparison.Ordinal)
+            |> equal 4
+
       testCase "String.LastIndexOf char works" <| fun () ->
             "abcdbc".LastIndexOf('b') * 100 + "abcd".LastIndexOf('e')
             |> equal 399
 
       testCase "String.LastIndexOf char works with offset" <| fun () ->
             "abcdbcebc".LastIndexOf('b', 3)
+            |> equal 1
+
+      testCase "String.LastIndexOf with StringComparison" <| fun () ->
+            "abcdbc".LastIndexOf("b", StringComparison.Ordinal)
+            |> equal 4
+
+      testCase "String.LastIndexOf with index and StringComparison" <| fun () ->
+            "abcdbc".LastIndexOf("b", 3, StringComparison.Ordinal)
             |> equal 1
 
       testCase "String.IndexOf works" <| fun () ->
@@ -729,6 +766,7 @@ let tests =
             "abcdbcebc".IndexOfAny([|'f';'e'|]) |> equal 6
             "abcdbcebc".IndexOfAny([|'f';'e'|], 2) |> equal 6
             "abcdbcebc".IndexOfAny([|'f';'e'|], 2, 4) |> equal -1
+            "abcdbcebc".IndexOfAny([|'c';'b'|]) |> equal 1
 
       testCase "String.StartsWith works" <| fun () ->
             let args = [("ab", true); ("cd", false); ("abcdx", false)]
@@ -1074,17 +1112,24 @@ let tests =
           let s4: FormattableString = $"I have `backticks`"
           s4.Format |> equal "I have `backticks`"
           let s5: FormattableString = $"I have {{escaped braces}} and %%percentage%%"
-          s5.Format |> equal "I have {escaped braces} and %percentage%"
+          s5.Format |> equal "I have {{escaped braces}} and %percentage%"
+          ()
 
 #if FABLE_COMPILER
       testCase "Can use FormattableString.GetStrings() extension" <| fun () ->
+// TypeScript will complain because TemplateStringsArray is not equivalent to string[]
+#if FABLE_COMPILER_TYPESCRIPT
+          let toArray = Seq.toArray
+#else
+          let toArray = id
+#endif
           let orderAmount = 100
           let convert (s: FormattableString) = s
           let s = convert $"You owe: {orderAmount:N5} {3} {5 = 5}"
-          s.GetStrings() |> equal [|"You owe: "; " "; " "; ""|]
+          s.GetStrings() |> toArray |> equal [|"You owe: "; " "; " "; ""|]
           let s2: FormattableString = $"""{5 + 2}This is "{"really"}" awesome!"""
-          s2.GetStrings()|> equal [|""; "This is \""; "\" awesome!"|]
+          s2.GetStrings() |> toArray |> equal [|""; "This is \""; "\" awesome!"|]
           let s3: FormattableString = $"""I have no holes"""
-          s3.GetStrings()|> equal [|"I have no holes"|]
+          s3.GetStrings() |> toArray |> equal [|"I have no holes"|]
 #endif
 ]

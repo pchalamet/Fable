@@ -6,7 +6,6 @@ open Fable
 open Fable.AST
 open Fable.AST.Fable
 open Fable.Transforms
-open Replacements.Util
 
 type ICompiler = FSharp2Fable.IFableCompiler
 
@@ -14,21 +13,21 @@ let curryExprAtRuntime (com: Compiler) arity (expr: Expr) =
     match com.Options.Language with
     // | Rust -> Rust.Replacements.curryExprAtRuntime com arity expr
     // | Python -> Helper.LibCall(com, "Util", "curry", expr.Type, [makeIntConst arity; expr])
-    | _ -> Replacements.Util.curryExprAtRuntime com arity expr
+    | _ -> Util.curryExprAtRuntime com arity expr
 
 let uncurryExprAtRuntime (com: Compiler) arity (expr: Expr) =
     match com.Options.Language with
-    //| Rust -> Rust.Replacements.uncurryExprAtRuntime com expr.Type arity expr
+    // | Rust -> Rust.Replacements.uncurryExprAtRuntime com expr.Type arity expr
     // | Python -> Helper.LibCall(com, "Util", "uncurry", expr.Type, [makeIntConst arity; expr])
-    | _ -> Replacements.Util.uncurryExprAtRuntime com arity expr
+    | _ -> Util.uncurryExprAtRuntime com arity expr
 
 let partialApplyAtRuntime (com: Compiler) t arity (fn: Expr) (args: Expr list) =
     match com.Options.Language with
-    //| Rust -> Rust.Replacements.partialApplyAtRuntime com t arity fn args
+    // | Rust -> Rust.Replacements.partialApplyAtRuntime com t arity fn args
     // | Python ->
     //     let args = NewArray(ArrayValues args, Any, MutableArray) |> makeValue None
     //     Helper.LibCall(com, "Util", "partialApply", t, [makeIntConst arity; fn; args])
-    | _ -> Replacements.Util.partialApplyAtRuntime com t arity fn args
+    | _ -> Util.partialApplyAtRuntime com t arity fn args
 
 let tryField (com: ICompiler) returnTyp ownerTyp fieldName =
     match com.Options.Language with
@@ -38,13 +37,28 @@ let tryField (com: ICompiler) returnTyp ownerTyp fieldName =
     | Go -> Go.Replacements.tryField com returnTyp ownerTyp fieldName
     | _ -> JS.Replacements.tryField com returnTyp ownerTyp fieldName
 
-let tryBaseConstructor (com: ICompiler) ctx (ent: EntityRef) (argTypes: Lazy<Type list>) genArgs args =
+let tryBaseConstructor
+    (com: ICompiler)
+    ctx
+    (ent: EntityRef)
+    (argTypes: Lazy<Type list>)
+    genArgs
+    args
+    =
     match com.Options.Language with
-    | Python -> Py.Replacements.tryBaseConstructor com ctx ent argTypes genArgs args
-    | Dart -> Dart.Replacements.tryBaseConstructor com ctx ent argTypes genArgs args
+    | Python ->
+        Py.Replacements.tryBaseConstructor com ctx ent argTypes genArgs args
+    | Dart ->
+        Dart.Replacements.tryBaseConstructor com ctx ent argTypes genArgs args
     | _ -> JS.Replacements.tryBaseConstructor com ctx ent argTypes genArgs args
 
-let makeMethodInfo (com: ICompiler) r (name: string) (parameters: (string * Type) list) (returnType: Type) =
+let makeMethodInfo
+    (com: ICompiler)
+    r
+    (name: string)
+    (parameters: (string * Type) list)
+    (returnType: Type)
+    =
     match com.Options.Language with
     | _ -> JS.Replacements.makeMethodInfo com r name parameters returnType
 
@@ -83,8 +97,12 @@ let defaultof (com: ICompiler) ctx r typ =
 let createMutablePublicValue (com: ICompiler) value =
     match com.Options.Language with
     | Python -> Py.Replacements.createAtom com value
-    | JavaScript | TypeScript -> JS.Replacements.createAtom com value
-    | Rust | Php | Dart | Go -> value
+    | JavaScript
+    | TypeScript -> JS.Replacements.createAtom com value
+    | Rust
+    | Php
+    | Dart
+    | Go -> value
 
 let getRefCell (com: ICompiler) r typ (expr: Expr) =
     match com.Options.Language with

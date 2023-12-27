@@ -28,15 +28,15 @@ type TestType3() =
     member _.Value = "Hi"
     interface ITest
 
-// type TestType4() =
-//     inherit TestType3()
-//     member _.Value2 = "Bye"
-//     interface ITest2
+type TestType4() =
+    inherit TestType3()
+    member _.Value2 = "Bye"
+    interface ITest2
 
-// type TestType5(greeting: string) =
-//     member _.Value = greeting
-//     member _.Overload(x) = x + x
-//     member _.Overload(x, y) = x + y
+type TestType5(greeting: string) =
+    member _.Value = greeting
+    member _.Overload(x) = x + x
+    member _.Overload(x, y) = x + y
 
 // type TestType8(?greeting) =
 //     member _.Value = defaultArg greeting "Hi"
@@ -54,36 +54,49 @@ type TestType3() =
 // type TestType10Child() =
 //     inherit TestType10Base()
 
-// type RenderState =
-//     { Now : int
-//       Players : Map<int, string>
-//       Map : string }
+type RenderState =
+    { Now : int
+      Players : Map<int, string>
+      Map : string }
 
-// type T4 = TestType4
+type T4 = TestType4
 
-// type TestType6(x: int) =
-//     let mutable i = x
-//     member val Value1 = i with get, set
-//     member _.Value2 = i + i
-//     member _.Value3 with get() = i * i and set(v) = i <- v
+type TestType6(x: int) =
+    let mutable i = x
+    member val Value1 = i with get, set
+    member _.Value2 = i + i
+    member _.Value3 with get() = i * i and set(v) = i <- v
 
-// type TestType7(a1, a2, a3) =
-//     let arr = [|a1; a2; a3|]
-//     member _.Value with get(i) = arr[i] and set(i) (v) = arr[i] <- v
+type TestType7(a1, a2, a3) =
+    let arr = [|a1; a2; a3|]
+    member _.Value with get(i) = arr[i] and set(i) (v) = arr[i] <- v
 
-// type A  = { thing: int } with
-//     member x.show() = string x.thing
-//     static member show (x: A) = "Static: " + (string x.thing)
+[<Fable.Core.AttachMembers>]
+type TestTypeAttached(a1, a2, a3) =
+    let arr = [| a1; a2; a3 |]
+    member _.Value1
+        with get () = arr.[1]
+        and set (v) = arr.[1] <- v
+    member _.Value
+        with get (i) = arr.[i]
+        and set (i) (v) = arr.[i] <- v
+    member _.Item
+        with get (i) = arr.[i]
+        and set (i) (v) = arr.[i] <- v
 
-// type B  = { label: string } with
-//     member x.show() = x.label
-//     static member show (x: B) = "Static: " + x.label
+type A  = { thing: int } with
+    member x.show() = string x.thing
+    static member show (x: A) = "Static: " + (string x.thing)
 
-// let inline show< ^T when ^T : (member show : unit -> string)> (x:^T) : string =
-//    (^T : (member show : unit -> string) (x))
+type B  = { label: string } with
+    member x.show() = x.label
+    static member show (x: B) = "Static: " + x.label
 
-// let inline showStatic< ^T when ^T : (static member show : ^T -> string)> (x:^T) : string =
-//    (^T : (static member show : ^T -> string) (x))
+let inline show< ^T when ^T : (member show : unit -> string)> (x:^T) : string =
+   (^T : (member show : unit -> string) (x))
+
+let inline showStatic< ^T when ^T : (static member show : ^T -> string)> (x:^T) : string =
+   (^T : (static member show : ^T -> string) (x))
 
 // [<AllowNullLiteral>]
 // type Serializable(?i: int) =
@@ -97,17 +110,17 @@ type TestType3() =
 //         sprintf "Public: %i - Private: %i - Deserialized: %b"
 //                 publicValue privateValue deserialized
 
-// type SecondaryCons(x: int) =
-//     new () = SecondaryCons(5)
-//     member _.Value = x
+type SecondaryCons(x: int) =
+    new () = SecondaryCons(5)
+    member _.Value = x
 
 // // type SecondaryConsChild() =
 // //     inherit SecondaryCons()
 
-// type MultipleCons(x: int, y: int) =
-//     new () = MultipleCons(2,3)
-//     new (x:int) = MultipleCons(x,4)
-//     member _.Value = x + y
+type MultipleCons(x: int, y: int) =
+    new () = MultipleCons(2,3)
+    new (x:int) = MultipleCons(x,4)
+    member _.Value = x + y
 
 // [<AbstractClass>]
 // type AbstractClassWithDefaults () =
@@ -137,27 +150,27 @@ type TestType3() =
 //     let mutable v = 5
 //     override __.MyProp with get() = v and set(v2) = v <- v + v2
 
-// type ISomeInterface =
-//     abstract OnlyGetProp: int with get
-//     abstract OnlyProp: int
-//     abstract Sender : int with get, set
+type ISomeInterface =
+    abstract OnlyGetProp: int with get
+    abstract OnlyProp: int
+    abstract Sender : int with get, set
 
-// type XISomeInterface () =
-//     let mutable i = 0
-//     interface ISomeInterface with
-//         member x.OnlyGetProp
-//             with get () = 0
-//         member x.OnlyProp = 3
-//         member x.Sender
-//             with get () = i
-//             and set i' = i <- i'
+type XISomeInterface () =
+    let mutable i = 0
+    interface ISomeInterface with
+        member x.OnlyGetProp
+            with get () = 0
+        member x.OnlyProp = 3
+        member x.Sender
+            with get () = i
+            and set i' = i <- i'
 
-// type IFoo =
-//     abstract Foo: unit -> string
-//     abstract Bar: string
-//     abstract MySetter: int with get, set
+type IFoo =
+    abstract Foo: unit -> string
+    abstract Bar: string
+    abstract MySetter: int with get, set
 
-// let mangleFoo(x: IFoo) = x.Foo()
+let mangleFoo(x: IFoo) = x.Foo()
 
 // type FooImplementor(i: int) =
 //     let mutable mut1 = 0
@@ -208,40 +221,40 @@ type TestType3() =
 //     member _.A() = 2
 //     member _.B() = base.A()
 
-// type Employee = { name: string; age: float; location: Location }
-// and Location = { name: string; mutable employees: Employee list }
+type Employee = { name: string; age: float; location: Location }
+and Location = { name: string; mutable employees: Employee list }
 
-// [<Struct>]
-// type ValueType<'T> =
-//     new (v) = { value = v }
-//     val value : 'T
-//     member x.Value = x.value
+[<Struct>]
+type ValueType<'T> =
+    new (v) = { value = v }
+    val value : 'T
+    member x.Value = x.value
 
-// [<Struct>]
-// type ValueType1<'T>(value: 'T) =
-//     member x.Value = value
+[<Struct>]
+type ValueType1<'T>(value: 'T) =
+    member x.Value = value
 
-// [<Struct>]
-// type ValueType2(i: int, j: int) =
-//     member x.Value = i + j
+[<Struct>]
+type ValueType2(i: int, j: int) =
+    member x.Value = i + j
 
-// type ValueType3 =
-//   struct
-//     val mutable public X : int
-//   end
+type ValueType3 =
+  struct
+    val mutable public X : int
+  end
 
-// [<Struct>]
-// type StructUnion = Value of string
+[<Struct>]
+type StructUnion = Value of string
 
 [<Struct>]
 type SimpleRecord = { A: string; B: string }
 
-// type Point2D =
-//    struct
-//       val X: float
-//       val Y: float
-//       new(xy: float) = { X = xy; Y = xy }
-//    end
+type Point2D =
+   struct
+      val X: float
+      val Y: float
+      new(xy: float) = { X = xy; Y = xy }
+   end
 
 // exception MyEx of int*string
 
@@ -253,15 +266,15 @@ type SimpleRecord = { A: string; B: string }
 //     let f () = v
 //     member val Value = f
 
-// type DowncastTest(value: int) =
-//     member _.Value = value
-//     interface System.IDisposable with
-//         member _.Dispose() = ()
+type DowncastTest(value: int) =
+    member _.Value = value
+    interface System.IDisposable with
+        member _.Dispose() = ()
 
-// [<Class>]
-// type TypeWithClassAttribute =
-//     val Pos : int
-//     new (pos) = { Pos=pos }
+[<Class>]
+type TypeWithClassAttribute =
+    val Pos : int
+    new (pos) = { Pos=pos }
 
 // // -------------------------------------------------------------
 // // Issue #1975: https://github.com/fable-compiler/Fable/issues/1975
@@ -397,15 +410,15 @@ type SimpleRecord = { A: string; B: string }
 //                 member _.Value = y
 //                 member this2.Add() = this1.Value + this2.Value }
 
-// let areEqual (x: obj) (y: obj) =
-//     x = y
+let areEqual (x: obj) (y: obj) =
+    x = y
 
-// type MyUnion1 = Foo of int * int | Bar of float | Baz
-// type MyUnion2 = Foo of int * int
-//     with override _.ToString() = "ffff"
+type MyUnion1 = Foo of int * int | Bar of float | Baz
+type MyUnion2 = Foo of int * int
+    with override _.ToString() = "ffff"
 
-// type MyRecord1 = { Foo: int; Bar: string }
-// type MyRecord2 = { Foo: int; Bar: string }
+type MyRecord1 = { Foo: int; Bar: string }
+type MyRecord2 = { Foo: int; Bar: string }
 
 // type SubclassTest1() = class end
 // type SubclassTest2() = inherit SubclassTest1()
@@ -460,10 +473,10 @@ type SimpleRecord = { A: string; B: string }
 // type ConcreteClass1() =
 //     inherit MangledAbstractClass5(2)
 
-// type IndexedProps(v: int) =
-//     let mutable v = v
-//     member _.Item with get (v2: int) = v + v2 and set v2 (s: string) = v <- v2 + int s
-//     member _.Item with get (v2: float) = float v + v2 / 2.
+type IndexedProps(v: int) =
+    let mutable v = v
+    member _.Item with get (v2: int) = v + v2 and set v2 (s: string) = v <- v2 + int s
+    member _.Item with get (v2: float) = float v + v2 / 2.
 
 // // TODO: This test produces different results in Fable and .NET
 // // See Fable.Transforms.FSharp2Fable.TypeHelpers.makeTypeGenArgs
@@ -474,13 +487,13 @@ type SimpleRecord = { A: string; B: string }
 // //     |> fun fi -> fi.PropertyType.GetGenericArguments().Length
 // //     |> equal 1
 
-// [<Fact>]
-// let ``Indexed properties work`` () =
-//     let f = IndexedProps(5)
-//     f[4] |> equal 9
-//     f[3] <- "6"
-//     f[4] |> equal 13
-//     f[4.] |> equal 11
+[<Fact>]
+let ``Indexed properties work`` () =
+    let f = IndexedProps(5)
+    f[4] |> equal 9
+    f[3] <- "6"
+    f[4] |> equal 13
+    f[4.] |> equal 11
 
 // [<Fact>]
 // let ``Types can instantiate their parent in the constructor`` () =
@@ -570,14 +583,14 @@ let ``Type testing with primitive types works`` () =
 //     DateTime.Now |> box |> isDate |> equal true
 //     box 5 |> isDate |> equal false
 
-// [<Fact>]
-// let ``Type test with Long`` () =
-//     let isLong (x: obj) =
-//         match x with
-//         | :? int64 -> true
-//         | _ -> false
-//     box 5L |> isLong |> equal true
-//     box 50 |> isLong |> equal false
+[<Fact>]
+let ``Type test with Long`` () =
+    let isLong (x: obj) =
+        match x with
+        | :? int64 -> true
+        | _ -> false
+    box 5L |> isLong |> equal true
+    box 50 |> isLong |> equal false
 
 // [<Fact>]
 // let ``Type test with BigInt`` () =
@@ -588,86 +601,76 @@ let ``Type testing with primitive types works`` () =
 //     box 5I |> isBigInd |> equal true
 //     box 50 |> isBigInd |> equal false
 
-// [<Fact>]
-// let ``Property names don't clash with built-in JS objects`` () = // See #168
-//     let gameState = {
-//         Now = 1
-//         Map = "dungeon"
-//         Players = Map.empty
-//     }
-//     gameState.Players.ContainsKey(1) |> equal false
+[<Fact>]
+let ``Property names don't clash with built-in JS objects`` () = // See #168
+    let gameState = {
+        Now = 1
+        Map = "dungeon"
+        Players = Map.empty
+    }
+    gameState.Players.ContainsKey(1) |> equal false
 
-// [<Fact>]
-// let ``Overloads work`` () =
-//     let t = TestType5("")
-//     t.Overload(2) |> equal 4
-//     t.Overload(2, 3) |> equal 5
+[<Fact>]
+let ``Overloads work`` () =
+    let t = TestType5("")
+    t.Overload(2) |> equal 4
+    t.Overload(2, 3) |> equal 5
 
-// [<Fact>]
-// let ``Type abbreviation works`` () =
-//     let t = T4()
-//     t.Value2 |> equal "Bye"
+[<Fact>]
+let ``Type abbreviation works`` () =
+    let t = T4()
+    t.Value2 |> equal "Bye"
 
-// [<Fact>]
-// let ``Getter and Setter work`` () =
-//     let t = TestType6(5)
-//     t.Value1 |> equal 5
-//     t.Value2 |> equal 10
-//     t.Value3 |> equal 25
-//     t.Value3 <- 10
-//     t.Value1 |> equal 5
-//     t.Value2 |> equal 20
-//     t.Value3 |> equal 100
-//     t.Value1 <- 20
-//     t.Value1 |> equal 20
-//     t.Value2 |> equal 20
-//     t.Value3 |> equal 100
+[<Fact>]
+let ``Getter and Setter work`` () =
+    let t = TestType6(5)
+    t.Value1 |> equal 5
+    t.Value2 |> equal 10
+    t.Value3 |> equal 25
+    t.Value3 <- 10
+    t.Value1 |> equal 5
+    t.Value2 |> equal 20
+    t.Value3 |> equal 100
+    t.Value1 <- 20
+    t.Value1 |> equal 20
+    t.Value2 |> equal 20
+    t.Value3 |> equal 100
 
-// [<Fact>]
-// let ``Getter and Setter with indexer work`` () =
-//     let t = TestType7(1, 2, 3)
-//     t.Value(1) |> equal 2
-//     t.Value(2) |> equal 3
-//     t.Value(1) <- 5
-//     t.Value(1) |> equal 5
-//     t.Value(2) |> equal 3
+[<Fact>]
+let ``Getter and Setter with indexer work`` () =
+    let t = TestType7(1, 2, 3)
+    t.Value(1) |> equal 2
+    t.Value(2) |> equal 3
+    t.Value(1) <- 5
+    t.Value(1) |> equal 5
+    t.Value(2) |> equal 3
 
-// [<Fact>]
-// let ``Statically resolved instance calls work`` () =
-//     let a = { thing = 5 }
-//     let b = { label = "five" }
-//     show a |> equal "5"
-//     show b |> equal "five"
+[<Fact>]
+let ``Attached Getters Setters and Indexers work`` () =
+    let t = TestTypeAttached(1, 2, 3)
+    t.Value1 |> equal 2
+    t.Value1 <- 22
+    t.Value1 |> equal 22
+    t.Value(0) |> equal 1
+    t.Value(0) <- 11
+    t.Value(0) |> equal 11
+    t[2] |> equal 3
+    t[2] <- 33
+    t[2] |> equal 33
 
-// [<Fact>]
-// let ``Statically resolved static calls work`` () =
-//     let a = { thing = 5 }
-//     let b = { label = "five" }
-//     showStatic a |> equal "Static: 5"
-//     showStatic b |> equal "Static: five"
+[<Fact>]
+let ``Statically resolved instance calls work`` () =
+    let a = { thing = 5 }
+    let b = { label = "five" }
+    show a |> equal "5"
+    show b |> equal "five"
 
-// [<Fact>]
-// let ``Guid.NewGuid works`` () =
-//     let g1 = Guid.NewGuid()
-//     let g2 = Guid.NewGuid()
-//     g1 = g2 |> equal false
-//     let s1 = string g1
-//     equal 36 s1.Length
-//     Text.RegularExpressions.Regex.IsMatch(
-//         s1, "^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$")
-//     |> equal true
-//     let g3 = Guid.Parse s1
-//     g1 = g3 |> equal true
-
-// [<Fact>]
-// let ``Guid.Empty works`` () =
-//     let g1 = Guid.Empty
-//     string g1 |> equal "00000000-0000-0000-0000-000000000000"
-
-// [<Fact>]
-// let ``Guid.ToString works`` () =
-//     let g1 = Guid.Parse "dec42487-c02b-42a6-9a10-0263a5a7fdf1"
-//     string g1 |> equal "dec42487-c02b-42a6-9a10-0263a5a7fdf1"
+[<Fact>]
+let ``Statically resolved static calls work`` () =
+    let a = { thing = 5 }
+    let b = { label = "five" }
+    showStatic a |> equal "Static: 5"
+    showStatic b |> equal "Static: five"
 
 // [<Fact>]
 // let ``lazy works`` () =
@@ -714,26 +717,26 @@ let ``Type testing with primitive types works`` () =
 //     search "b" |> equal (Some "b")
 //     search "d" |> equal None
 
-// [<Fact>]
-// let ``Secondary constructors work`` () =
-//     let s1 = SecondaryCons(3)
-//     let s2 = SecondaryCons()
-//     equal 3 s1.Value
-//     equal 5 s2.Value
-
-// // [<Fact>]
-// // let ``Inheriting from secondary constructors works`` () =
-// //     let s = SecondaryConsChild()
-// //     equal 5 s.Value
+[<Fact>]
+let ``Secondary constructors work`` () =
+    let s1 = SecondaryCons(3)
+    let s2 = SecondaryCons()
+    equal 3 s1.Value
+    equal 5 s2.Value
 
 // [<Fact>]
-// let ``Multiple constructors work`` () =
-//     let m1 = MultipleCons()
-//     let m2 = MultipleCons(5)
-//     let m3 = MultipleCons(7,7)
-//     equal 5 m1.Value
-//     equal 9 m2.Value
-//     equal 14 m3.Value
+// let ``Inheriting from secondary constructors works`` () =
+//     let s = SecondaryConsChild()
+//     equal 5 s.Value
+
+[<Fact>]
+let ``Multiple constructors work`` () =
+    let m1 = MultipleCons()
+    let m2 = MultipleCons(5)
+    let m3 = MultipleCons(7,7)
+    equal 5 m1.Value
+    equal 9 m2.Value
+    equal 14 m3.Value
 
 // [<Fact>]
 // let ``Abstract methods with default work`` () = // See #505
@@ -750,12 +753,12 @@ let ``Type testing with primitive types works`` () =
 //     x.MyProp <- 2
 //     equal 7 x.MyProp
 
-// [<Fact>]
-// let ``Interface setters don't conflict`` () = // See #505
-//     let x = XISomeInterface () :> ISomeInterface
-//     x.Sender |> equal 0
-//     x.Sender <- 5
-//     x.Sender |> equal 5
+[<Fact>]
+let ``Interface setters don't conflict`` () = // See #505
+    let x = XISomeInterface () :> ISomeInterface
+    x.Sender |> equal 0
+    x.Sender <- 5
+    x.Sender |> equal 5
 
 // [<Fact>]
 // let ``A type can overload an interface method`` () =
@@ -820,20 +823,20 @@ let ``Type testing with primitive types works`` () =
 //     let bar = ExtendedClass2()
 //     bar.B() |> equal 1
 
-// [<Fact>]
-// let ``Circular dependencies work`` () = // See #569
-//     let location = { name="NY"; employees=[] }
-//     let alice = { name="Alice"; age=20.0; location=location  }
-//     location.name |> equal "NY"
-//     alice.age |> equal 20.
+[<Fact>]
+let ``Circular dependencies work`` () = // See #569
+    let location = { name="NY"; employees=[] }
+    let alice = { name="Alice"; age=20.0; location=location  }
+    location.name |> equal "NY"
+    alice.age |> equal 20.
 
-// [<Fact>]
-// let ``Value Type records work`` () = // See #568
-//     let foo1 = ValueType<_>("foo")
-//     let foo2 = ValueType<_>("foo")
-//     foo1.Value |> equal "foo"
-//     foo1.value |> equal "foo"
-//     foo1 = foo2 |> equal true
+[<Fact>]
+let ``Value Type records work`` () = // See #568
+    let foo1 = ValueType<_>("foo")
+    let foo2 = ValueType<_>("foo")
+    foo1.Value |> equal "foo"
+    foo1.value |> equal "foo"
+    foo1 = foo2 |> equal true
 
 // [<Fact>]
 // let ``Value Type unions work`` () =
@@ -841,37 +844,37 @@ let ``Type testing with primitive types works`` () =
 //     let du2 = StructUnion.Value "du"
 //     du1 = du2 |> equal true
 
-// [<Fact>]
-// let ``Value Type tuples work`` () =
-//     let tu1 = struct ("a","b")
-//     let tu2 = struct ("a","b")
-//     tu1 = tu2 |> equal true
+[<Fact>]
+let ``Value Type tuples work`` () =
+    let tu1 = struct ("a","b")
+    let tu2 = struct ("a","b")
+    tu1 = tu2 |> equal true
 
-// [<Fact>]
-// let ``Value Types work`` () =
-//     let bar1 = ValueType1("bar")
-//     let bar2 = ValueType1("bar")
-//     bar1.Value |> equal "bar"
-//     bar1 = bar2 |> equal true
+[<Fact>]
+let ``Value Types work`` () =
+    let bar1 = ValueType1("bar")
+    let bar2 = ValueType1("bar")
+    bar1.Value |> equal "bar"
+    bar1 = bar2 |> equal true
 
-// [<Fact>]
-// let ``Other Value Types work`` () =
-//     let test2 = ValueType2(3, 4)
-//     test2.Value |> equal 7
-//     let p = Point2D(2.)
-//     p.Y |> equal 2.
+[<Fact>]
+let ``Other Value Types work`` () =
+    let test2 = ValueType2(3, 4)
+    test2.Value |> equal 7
+    let p = Point2D(2.)
+    p.Y |> equal 2.
 
-// [<Fact>]
-// let ``struct without explicit ctor works`` () =
-//     let t1 = ValueType3(X=10)
-//     t1.X |> equal 10
-//     let mutable t2 = ValueType3()
-//     t2.X |> equal 0
-//     t1 |> notEqual t2
-//     (compare t1 t2) |> equal 1
-//     t2.X <- 10
-//     t1 |> equal t2
-//     (compare t1 t2) |> equal 0
+[<Fact>]
+let ``struct without explicit ctor works`` () =
+    let t1 = ValueType3(X=10)
+    t1.X |> equal 10
+    let mutable t2 = ValueType3()
+    t2.X |> equal 0
+    t1 |> notEqual t2
+    (compare t1 t2) |> equal 1
+    t2.X <- 10
+    t1 |> equal t2
+    (compare t1 t2) |> equal 0
 
 [<Fact>]
 let ``copying struct records works`` () = // See #3371
@@ -927,10 +930,10 @@ let ``copying struct records works`` () = // See #3371
 //     f1.Add2(4, 5) |> equal -1
 //     f2.Add2(4, 5) |> equal -1
 
-// [<Fact>]
-// let ``ClassAttribute works`` () = // See #573
-//     let t1 = TypeWithClassAttribute(8)
-//     t1.Pos |> equal 8
+[<Fact>]
+let ``ClassAttribute works`` () = // See #573
+    let t1 = TypeWithClassAttribute(8)
+    t1.Pos |> equal 8
 
 // [<Fact>]
 // let ``Issue #1975: Compile type with parameterized units of measure as generic`` () =

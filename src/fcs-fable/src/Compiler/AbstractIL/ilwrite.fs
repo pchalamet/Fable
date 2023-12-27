@@ -389,6 +389,7 @@ type MetadataTable<'T> =
         | true, res -> res
         | _ -> tbl.AddSharedEntry x
 
+    member tbl.Contains x  = tbl.dict.ContainsKey x
 
     /// This is only used in one special place - see further below.
     member tbl.SetRowsOfTable t =
@@ -402,6 +403,8 @@ type MetadataTable<'T> =
         else tbl.AddSharedEntry x
 
     member tbl.GetTableEntry x = tbl.dict[x]
+
+    override x.ToString() = "table " + x.name
 
 //---------------------------------------------------------------------
 // Keys into some of the tables
@@ -448,6 +451,8 @@ type MethodDefKey(ilg:ILGlobals, tidx: int, garity: int, nm: string, retTy: ILTy
             retTy = y.ReturnType && List.lengthsEqAndForall2 compareILTypes argTys y.ArgTypes &&
             isStatic = y.IsStatic
         | _ -> false
+
+    override x.ToString() = nm
 
 /// We use this key type to help find ILFieldDefs for FieldRefs
 type FieldDefKey(tidx: int, nm: string, ty: ILType) =
@@ -1070,6 +1075,17 @@ let GetMemberAccessFlags access =
     | ILMemberAccess.Assembly -> 0x00000003
 
 exception MethodDefNotFound
+
+let private MethodDefIdxExists cenv (mref: ILMethodRef) = 
+    let tref = mref.DeclaringTypeRef
+    if not (isTypeRefLocal tref) then
+        // Method referred to by method impl, event or property is not in a type defined in this module.
+        false
+    else
+        let tidx = GetIdxForTypeDef cenv (TdKey(tref.Enclosing, tref.Name))
+        let mdkey = MethodDefKey (cenv.ilg, tidx, mref.GenericArity, mref.Name, mref.ReturnType, mref.ArgTypes, mref.CallingConv.IsStatic)
+        cenv.methodDefIdxsByKey.Contains mdkey
+
 let FindMethodDefIdx cenv mdkey =
     try cenv.methodDefIdxsByKey.GetTableEntry mdkey
     with :? KeyNotFoundException ->
@@ -1135,8 +1151,11 @@ let canGenMethodDef (tdef: ILTypeDef) cenv (mdef: ILMethodDef) =
         match mdef.Access with
         | ILMemberAccess.Public -> true
         // When emitting a reference assembly, do not emit methods that are private/protected/internal unless they are virtual/abstract or provide an explicit interface implementation.
+        // REVIEW: Addded(vlza, fixes #14937):
+        //   We also emit methods that are marked as HideBySig and static,
+        //   since they're not virtual or abstract, but we want (?) the same behaviour as normal instance implementations.
         | ILMemberAccess.Private | ILMemberAccess.Family | ILMemberAccess.Assembly | ILMemberAccess.FamilyOrAssembly
-            when mdef.IsVirtual || mdef.IsAbstract || mdef.IsNewSlot || mdef.IsFinal || mdef.IsEntryPoint -> true
+            when (mdef.IsHideBySig && mdef.IsStatic) || mdef.IsVirtual || mdef.IsAbstract || mdef.IsNewSlot || mdef.IsFinal || mdef.IsEntryPoint -> true
         // When emitting a reference assembly, only generate internal methods if the assembly contains a System.Runtime.CompilerServices.InternalsVisibleToAttribute.
         | ILMemberAccess.FamilyOrAssembly | ILMemberAccess.Assembly
             when cenv.hasInternalsVisibleToAttrib -> true
@@ -1160,12 +1179,11 @@ let canGenEventDef cenv (ev: ILEventDef) =
     if not cenv.referenceAssemblyOnly then
         true
     else
-        // If we have GetMethod or SetMethod set (i.e. not None), try and see if we have MethodDefs for them.
+        // If we have AddMethod or RemoveMethod set (i.e. not None), try and see if we have MethodDefs for them.
         // NOTE: They can be not-None and missing MethodDefs if we skip generating them for reference assembly in the earlier pass.
-        // Only generate property if we have at least getter or setter, otherwise, we skip.
+        // Only generate event if we have at least add or remove, otherwise, we skip.
         [| ev.AddMethod; ev.RemoveMethod |]
-        |> Array.map (TryGetMethodRefAsMethodDefIdx cenv)
-        |> Array.exists (function | Ok _ -> true | _ -> false)
+        |> Array.exists (MethodDefIdxExists cenv)
 
 let canGenPropertyDef cenv (prop: ILPropertyDef) =
     if not cenv.referenceAssemblyOnly then
@@ -1174,10 +1192,9 @@ let canGenPropertyDef cenv (prop: ILPropertyDef) =
         // If we have GetMethod or SetMethod set (i.e. not None), try and see if we have MethodDefs for them.
         // NOTE: They can be not-None and missing MethodDefs if we skip generating them for reference assembly in the earlier pass.
         // Only generate property if we have at least getter or setter, otherwise, we skip.
-        [| prop.GetMethod; prop.SetMethod |]      
+        [| prop.GetMethod; prop.SetMethod |]
         |> Array.choose id
-        |> Array.map (TryGetMethodRefAsMethodDefIdx cenv)
-        |> Array.exists (function | Ok _ -> true | _ -> false)
+        |> Array.exists (MethodDefIdxExists cenv)
 
 let rec GetTypeDefAsRow cenv env _enc (tdef: ILTypeDef) =
     let nselem, nelem = GetTypeNameAsElemPair cenv tdef.Name
@@ -1286,14 +1303,14 @@ and GenTypeDefPass2 pidx enc cenv (tdef: ILTypeDef) =
         // Now generate or assign index numbers for tables referenced by the maps.
         // Don't yet generate contents of these tables - leave that to pass3, as
         // code may need to embed these entries.
-        tdef.Implements |> List.iter (GenImplementsPass2 cenv env tidx)        
-        events |> List.iter (GenEventDefPass2 cenv tidx)
+        tdef.Implements |> List.iter (GenImplementsPass2 cenv env tidx)
         tdef.Fields.AsList() |> List.iter (GenFieldDefPass2 tdef cenv tidx)
         tdef.Methods |> Seq.iter (GenMethodDefPass2 tdef cenv tidx)
-        // Generation of property definitions for **ref assemblies** is checking existence of generated method definitions.
+        // Generation of property & event definitions for **ref assemblies** is checking existence of generated method definitions.
         // Therefore, due to mutable state within "cenv", order of operations matters.
         // Who could have thought that using shared mutable state can bring unexpected bugs...?
         props |> List.iter (GenPropertyDefPass2 cenv tidx)
+        events |> List.iter (GenEventDefPass2 cenv tidx)
         tdef.NestedTypes.AsList() |> GenTypeDefsPass2 tidx (enc@[tdef.Name]) cenv
    with exn ->
      failwith ("Error in pass2 for type "+tdef.Name+", error: " + exn.Message)
@@ -2476,6 +2493,7 @@ let rec GetGenericParamAsGenericParamRow cenv _env idx owner gp =
         (if gp.HasReferenceTypeConstraint then 0x0004 else 0x0000) |||
         (if gp.HasNotNullableValueTypeConstraint then 0x0008 else 0x0000) |||
         (if gp.HasDefaultConstructorConstraint then 0x0010 else 0x0000)
+   
 
     let mdVersionMajor, _ = metadataSchemaVersionSupportedByCLRVersion cenv.desiredMetadataVersion
     if (mdVersionMajor = 1) then
@@ -2663,7 +2681,7 @@ let GenMethodImplPass3 cenv env _tgparams tidx mimpl =
     let midx2Tag, midx2Row = GetOverridesSpecAsMethodDefOrRef cenv env mimpl.Overrides
     AddUnsharedRow cenv TableNames.MethodImpl
         (UnsharedRow
-             [| SimpleIndex (TableNames.TypeDef, tidx)
+            [|  SimpleIndex (TableNames.TypeDef, tidx)
                 MethodDefOrRef (midxTag, midxRow)
                 MethodDefOrRef (midx2Tag, midx2Row) |]) |> ignore
 
@@ -3691,12 +3709,12 @@ let writePdb (
     // Used to capture the pdb file bytes in the case we're generating in-memory
     let mutable pdbBytes = None
 
-    let signImage () =
+    let signImage reopenOutput =
         // Sign the binary. No further changes to binary allowed past this point!
         match signer with
         | None -> ()
         | Some s ->
-            use fs = reopenOutput()
+            use fs = reopenOutput ()
             try
                 s.SignStream fs
             with exn ->
@@ -3705,7 +3723,7 @@ let writePdb (
 
     // Now we've done the bulk of the binary, do the PDB file and fixup the binary.
     match pdbfile with
-    | None -> signImage ()
+    | None -> signImage reopenOutput
 
     | Some pdbfile ->
         let idd =
@@ -3733,7 +3751,7 @@ let writePdb (
             | None -> [| |]
 
         // Now we have the debug data we can go back and fill in the debug directory in the image
-        use fs2 = reopenOutput()
+        use fs2 = reopenOutput ()
         let os2 = new BinaryWriter(fs2)
         try
             // write the IMAGE_DEBUG_DIRECTORY
@@ -3756,7 +3774,12 @@ let writePdb (
                     if i.iddChunk.size < i.iddData.Length then failwith "Debug data area is not big enough. Debug info may not be usable"
                     writeBytes os2 i.iddData
             reportTime "Finalize PDB"
-            signImage ()
+
+            let gotoStartOfStream (stream:Stream) : Stream =
+                stream.Seek(0, SeekOrigin.Begin) |> ignore
+                stream
+
+            signImage (fun () -> gotoStartOfStream os2.BaseStream)
             os2.Dispose()
             reportTime "Generate PDB Info"
         with exn ->
@@ -3784,6 +3807,7 @@ type options =
      dumpDebugInfo: bool
      referenceAssemblyOnly: bool
      referenceAssemblyAttribOpt: ILAttribute option
+     referenceAssemblySignatureHash : int option
      pathMap: PathMap }
 
 let writeBinaryAux (stream: Stream, options: options, modul, normalizeAssemblyRefs) =
@@ -4111,11 +4135,17 @@ let writeBinaryAux (stream: Stream, options: options, modul, normalizeAssemblyRe
               | HashAlgorithm.Sha256 -> System.Security.Cryptography.SHA256.Create() :> System.Security.Cryptography.HashAlgorithm
 
           let hCode = sha.ComputeHash code
-          let hData = sha.ComputeHash data
-          let hMeta = sha.ComputeHash metadata
+          let hData = sha.ComputeHash data   
+          // Not yet suitable for the mvidsection optimization           
 
-          // Not yet suitable for the mvidsection optimization 
-          let deterministicId = [| hCode; hData; hMeta |] |> Array.collect id |> sha.ComputeHash
+          let deterministicId = 
+            [| hCode
+               hData
+               match options.referenceAssemblyOnly, options.referenceAssemblySignatureHash with
+               | true, Some impliedSigHash -> System.BitConverter.GetBytes(impliedSigHash)
+               | _ -> sha.ComputeHash metadata |] 
+            |> Array.collect id 
+            |> sha.ComputeHash
           let deterministicMvid () = deterministicId[0..15]
           let pdbData =
             // Hash code, data and metadata
@@ -4531,7 +4561,7 @@ let writeBinaryFiles (options: options, modul, normalizeAssemblyRefs) =
 let writeBinaryInMemory (options: options, modul, normalizeAssemblyRefs) =
 
     let stream = new MemoryStream()
-    let options = { options with referenceAssemblyOnly = false; referenceAssemblyAttribOpt = None }
+    let options = { options with referenceAssemblyOnly = false; referenceAssemblyAttribOpt = None; referenceAssemblySignatureHash = None }
     let pdbData, pdbInfoOpt, debugDirectoryChunk, debugDataChunk, debugChecksumPdbChunk, debugEmbeddedPdbChunk, debugDeterministicPdbChunk, textV2P, _mappings =
         writeBinaryAux(stream, options, modul, normalizeAssemblyRefs)
 

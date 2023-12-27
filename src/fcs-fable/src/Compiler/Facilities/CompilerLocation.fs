@@ -41,7 +41,8 @@ module internal FSharpEnvironment =
     let FSharpBinaryMetadataFormatRevision = "2.0.0.0"
 
     let isRunningOnCoreClr =
-        typeof<obj>.Assembly.FullName.StartsWith ("System.Private.CoreLib", StringComparison.InvariantCultureIgnoreCase)
+        typeof<obj>.Assembly.FullName
+            .StartsWith("System.Private.CoreLib", StringComparison.InvariantCultureIgnoreCase)
 
     module Option =
         /// Convert string into Option string where null and String.Empty result in None
@@ -55,7 +56,6 @@ module internal FSharpEnvironment =
             Some pathFromCurrentDomain
         else
             None
-
 
     // The default location of FSharp.Core.dll and fsc.exe based on the version of fsc.exe that is running
     // Used for
@@ -105,6 +105,7 @@ module internal FSharpEnvironment =
     let toolingCompatibleVersions =
         if typeof<obj>.Assembly.GetName().Name = "mscorlib" then
             [|
+                "net481"
                 "net48"
                 "net472"
                 "net471"
@@ -118,6 +119,7 @@ module internal FSharpEnvironment =
             |]
         elif typeof<obj>.Assembly.GetName().Name = "System.Private.CoreLib" then
             [|
+                "net8.0"
                 "net7.0"
                 "net6.0"
                 "net5.0"
@@ -180,14 +182,16 @@ module internal FSharpEnvironment =
             seq {
                 match path with
                 | None -> ()
-                | Some (p: string) ->
+                | Some(p: string) ->
                     match Path.GetDirectoryName(p) with
-                    | s when s = "" || s = null || Path.GetFileName(p) = "packages" || s = p -> ()
+                    | s when s = "" || isNull s || Path.GetFileName(p) = "packages" || s = p -> ()
                     | parentDir -> yield! searchParentDirChain (Some parentDir) assemblyName
 
                 for p in searchToolPaths path compilerToolPaths do
                     let fileName = Path.Combine(p, assemblyName)
-                    if File.Exists fileName then yield fileName
+
+                    if File.Exists fileName then
+                        yield fileName
             }
 
         let loadFromParentDirRelativeToRuntimeAssemblyLocation designTimeAssemblyName =

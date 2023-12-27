@@ -13,6 +13,15 @@ let LINE_SEPARATOR = "\u2028"
 let [<Literal>] aLiteral = "foo"
 let notALiteral = "foo"
 
+[<Literal>]
+let formatCoordinateBody = "(%f,%f)"
+
+[<Literal>]
+let formatPrefix = "Person at coordinates"
+
+[<Literal>]
+let fullFormat = formatPrefix + formatCoordinateBody
+
 // type MyUnion = Bar of int * int | Foo1 of float | Foo3 | Foo4 of MyUnion
 
 // type Test(i: int) =
@@ -343,6 +352,12 @@ let ``Backslash is escaped in interpolated strings`` () = // See #2649
     @$"\{4}".Length |> equal 2
 
 [<Fact>]
+let ``Extended string interpolation syntax`` =
+    let classAttr = "item-panel"
+    let cssNew = $$""".{{classAttr}}:hover {background-color: #eee;}"""
+    cssNew |> equal ".item-panel:hover {background-color: #eee;}"
+
+[<Fact>]
 let ``interpolated string with double % should be unescaped`` () =
     $"{100}%%" |> equal "100%"
 
@@ -423,6 +438,14 @@ let ``sprintf integers with sign and padding works`` () = // See #1931
     sprintf "%5d" -5 |> equal "   -5"
     sprintf "%5d" -5L |> equal "   -5"
     // sprintf "%- 4i" 5 |> equal " 5  " //TODO:
+
+[<Fact>]
+let ``test format string can use and compose string literals`` =
+    let renderedCoordinates = sprintf formatCoordinateBody 0.25 0.75
+    let renderedText = sprintf fullFormat 0.25 0.75
+
+    equal "(0.250000,0.750000)" renderedCoordinates
+    equal "Person at coordinates(0.250000,0.750000)" renderedText
 
 // [<Fact>]
 // let ``parameterized padding works`` () = // See #2336
@@ -986,6 +1009,7 @@ let ``String.IndexOfAny works`` () =
     "abcdbcebc".IndexOfAny([|'f';'e'|]) |> equal 6
     "abcdbcebc".IndexOfAny([|'f';'e'|], 2) |> equal 6
     "abcdbcebc".IndexOfAny([|'f';'e'|], 2, 4) |> equal -1
+    "abcdbcebc".IndexOfAny([|'c';'b'|]) |> equal 1
 
 [<Fact>]
 let ``String.LastIndexOfAny works`` () =
@@ -1090,13 +1114,10 @@ let ``String.Substring works with length`` () =
     "abcdefg".Substring(2, 2)
     |> equal "cd"
 
-// [<Fact>]
-// let ``String.Substring throws error if startIndex or length are out of bounds`` () = // See #1955
-//     let throws f =
-//         try f () |> ignore; false
-//         with _ -> true
-//     throws (fun _ -> "abcdefg".Substring(20)) |> equal true
-//     throws (fun _ -> "abcdefg".Substring(2, 10)) |> equal true
+[<Fact>]
+let ``String.Substring throws error if startIndex or length are out of bounds`` () = // See #1955
+    throwsAnyError (fun () -> "abcdefg".Substring(20))
+    throwsAnyError (fun () -> "abcdefg".Substring(2, 10))
 
 [<Fact>]
 let ``String.ToUpper works`` () =
@@ -1419,7 +1440,8 @@ let ``String.filter with Char.IsDigit as a predicate doesn't hang`` () =
 //     let s4: FormattableString = $"I have `backticks`"
 //     s4.Format |> equal "I have `backticks`"
 //     let s5: FormattableString = $"I have {{escaped braces}} and %%percentage%%"
-//     s5.Format |> equal "I have {escaped braces} and %percentage%"
+//     s5.Format |> equal "I have {{escaped braces}} and %percentage%"
+//     ()
 
 // #if FABLE_COMPILER
 // [<Fact>]

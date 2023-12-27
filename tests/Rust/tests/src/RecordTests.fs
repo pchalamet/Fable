@@ -251,6 +251,9 @@ type MutatingRecord =
 
 type Id = Id of string
 
+type CarInterior = { Seats: int }
+type Car = { Interior: CarInterior }
+
 //TODO:
 // let inline replaceById< ^t when ^t : (member Id : Id)> (newItem : ^t) (ar: ^t[]) =
 //     Array.map (fun (x: ^t) -> if (^t : (member Id : Id) newItem) = (^t : (member Id : Id) x) then newItem else x) ar
@@ -352,6 +355,22 @@ let ``Mutating records work`` () =
     equal -10 x''.uniqueA
     equal -20 x''.uniqueB
 
+[<Fact>]
+let ``Nested record field copy and update works for records`` =
+    let car =
+        { Interior = { Seats = 4 } }
+    let car2 =
+        { car with Interior.Seats = 5 }
+    equal 5 car2.Interior.Seats
+
+[<Fact>]
+let ``Nested record field copy and update works for anonymous records`` =
+    let car =
+        {| Interior = {| Seats = 4 |} |}
+    let car2 =
+        {| car with Interior.Seats = 5 |}
+    equal 5 car2.Interior.Seats
+
 module ComplexEdgeCases =
     open Common.Imports.Vectors
     open Fable.Core.Rust
@@ -381,7 +400,7 @@ module ComplexEdgeCases =
         res.Spatial.Rotation |> equal (1.1f<Rad> + 1.2f<Rad>)
 
     [<Fact>]
-    let ``Ref tracking should correctly count arm ident usages + clone accordingly`` () =
+    let ``Ref tracking should correctly count arm ident usages and clone accordingly`` () =
         let cmpPropLstR = [{ MyRecord.a = 1; b = "2"; c = 3.0 }]
         let add1 (x: MyRecord) = {x with a = x.a + 1}
         let res =
@@ -417,7 +436,7 @@ module ComplexEdgeCases =
 
     // This is mainly about ensuring the idents are correctly counted leading to too little/much cloning and potentially a build error
     [<Fact>]
-    let ``Ref tracking should correctly count arm ident usages 2 + clone accordingly`` () =
+    let ``Ref tracking should correctly count arm ident usages and clone accordingly II`` () =
         let current = { Items = [{Name = "ab"; Spatial = Some { Rotation = 1.1f<Rad>; Position = { x = 1f<m>; y = 2f<m> } }}]}
         let next = someStateTransform T_A current
         next |> notEqual current

@@ -4,12 +4,16 @@
     <DisableImplicitFSharpCoreReference>true</DisableImplicitFSharpCoreReference>
     <OutputType>Exe</OutputType>
     <TargetFramework>net6.0</TargetFramework>
-    <Version>4.0.1</Version>
-    <PackageVersion>4.0.1</PackageVersion>
-    <PackageReleaseNotes>* Fix #3371: Copying struct records
-* Php: Improve output @entropitor
-* Rust: string improvements
-* TypeScript: Fix applicative tests</PackageReleaseNotes>
+    <Version>4.9.0</Version>
+    <PackageReleaseNotes>## Fixed
+
+
+### Python
+
+- [GH-3655](https://github.com/fable-compiler/Fable/issues/3655) Fix for Python output file names (by @dbrattli)
+- [GH-3660](https://github.com/fable-compiler/Fable/issues/3660) Fix for decimal to string with culture (by @dbrattli)
+
+</PackageReleaseNotes>
     <!-- Allow users with newer dotnet SDK to run Fable, see #1910 -->
     <RollForward>Major</RollForward>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
@@ -19,36 +23,35 @@
     <Description>F# to JS compiler</Description>
     <OtherFlags>$(OtherFlags) --nowarn:3536</OtherFlags>
   </PropertyGroup>
-  <ItemGroup Condition="'$(Pack)' == 'true'">
-    <Content Include="..\..\build\fable-library\**\*.*" PackagePath="fable-library\" />
-    <Content Include="..\..\build\fable-library-ts\**\*.*" PackagePath="fable-library-ts\" />
-    <Content Include="..\..\build\fable-library-py\**\*.*" PackagePath="fable-library-py\" />
-    <Content Include="..\..\build\fable-library-rust\**\*.*" PackagePath="fable-library-rust\" />
-    <Content Include="..\..\build\fable-library-dart\**\*.*" PackagePath="fable-library-dart\" />
+  <ItemGroup>
+    <Content Include="..\..\temp\fable-library\**\*.*" PackagePath="fable-library\" />
+    <Content Include="..\..\temp\fable-library-ts\**\*.*" PackagePath="fable-library-ts\" />
+    <Content Include="..\..\temp\fable-library-py\**\*.*" PackagePath="fable-library-py\" />
+    <Content Include="..\..\temp\fable-library-rust\**\*.*" PackagePath="fable-library-rust\" />
+    <Content Include="..\..\temp\fable-library-dart\**\*.*" PackagePath="fable-library-dart\" />
     <Content Include="..\fable-library-php\**\*.*" PackagePath="fable-library-php\" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Util.fs" />
     <Compile Include="Contributors.fs" />
-    <Compile Include="Globbing.fs" />
-    <Compile Include="ProjectCracker.fs" />
     <Compile Include="Printers.fs" />
+    <Compile Include="FileWatchers.fsi" />
     <Compile Include="FileWatchers.fs" />
     <Compile Include="Pipeline.fs" />
     <Compile Include="Main.fs" />
     <Compile Include="Entry.fs" />
-    <Content Include="RELEASE_NOTES.md" />
+    <Content Include="CHANGELOG.md" />
     <Content Include="Properties\launchSettings.json" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Fable.Compiler\Fable.Compiler.fsproj" />
     <ProjectReference Include="..\Fable.Transforms\Fable.Transforms.fsproj" />
     <Reference Include="../../lib/fcs/FSharp.Compiler.Service.dll" />
     <Reference Include="../../lib/fcs/FSharp.DependencyManager.Nuget.dll" />
     <Reference Include="../../lib/fcs/FSharp.Core.dll" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Buildalyzer" Version="4.1.6" />
-    <PackageReference Include="FSharp.SystemTextJson" Version="0.17.4" />
-    <PackageReference Include="source-map-sharp" Version="1.0.8" />
+    <PackageReference Include="Buildalyzer" Version="5.0.1" />
+    <PackageReference Include="FSharp.SystemTextJson" Version="1.2.42" />
+    <PackageReference Include="source-map-sharp" Version="1.0.9" />
   </ItemGroup>
 </Project>

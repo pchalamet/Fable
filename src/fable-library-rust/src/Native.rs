@@ -1,3 +1,5 @@
+#[cfg_attr(rustfmt, rustfmt::skip)]
+
 // import at root level
 mod FuncType;
 mod Lazy;
@@ -6,7 +8,7 @@ mod LrcPtr;
 mod Mutable;
 
 pub mod Native_ {
-    extern crate alloc;
+    pub(crate) extern crate alloc;
 
     // re-export at module level
     // pub use alloc::borrow::Cow;
@@ -43,11 +45,17 @@ pub mod Native_ {
     #[cfg(not(feature = "lrc_ptr"))]
     pub type LrcPtr<T> = Lrc<T>;
 
+    #[inline]
     #[cfg(feature = "lrc_ptr")]
-    pub fn fromFluent<T>(value: Lrc<T>) -> LrcPtr<T> { LrcPtr::from(value) }
+    pub fn fromFluent<T>(value: Lrc<T>) -> LrcPtr<T> {
+        LrcPtr::from(value)
+    }
 
+    #[inline]
     #[cfg(not(feature = "lrc_ptr"))]
-    pub fn fromFluent<T>(value: Lrc<T>) -> LrcPtr<T> { value }
+    pub fn fromFluent<T>(value: Lrc<T>) -> LrcPtr<T> {
+        value
+    }
 
     // TODO: use these types in generated code
     pub type seq<T> = LrcPtr<dyn crate::Interfaces_::System::Collections::Generic::IEnumerable_1<T>>;
@@ -56,7 +64,7 @@ pub mod Native_ {
     pub type Nullable<T> = Option<Lrc<T>>;
 
     use core::cmp::Ordering;
-    use core::hash::Hash;
+    use core::hash::{Hash, Hasher, BuildHasher};
 
     // -----------------------------------------------------------
     // Helpers
@@ -72,17 +80,35 @@ pub mod Native_ {
         Default::default()
     }
 
-    pub fn referenceEquals<T>(left: &T, right: &T) -> bool {
+    pub fn min<T: PartialOrd>(x: T, y: T) -> T {
+        if x < y { x } else { y }
+    }
+
+    pub fn max<T: PartialOrd>(x: T, y: T) -> T {
+        if x > y { x } else { y }
+    }
+
+    pub fn equals<T: PartialEq>(x: T, y: T) -> bool {
+        x.eq(&y)
+    }
+
+    pub fn referenceEquals<T: ?Sized>(left: &T, right: &T) -> bool {
         core::ptr::eq(left, right)
     }
 
-    // pub fn compare<T: Ord>(x: T, y: T) -> i32 {
-    //     match x.cmp(&y) {
-    //         Ordering::Less => -1,
-    //         Ordering::Greater => 1,
-    //         Ordering::Equal => 0,
-    //     }
-    // }
+    pub fn getHashCode<T: Hash>(x: T) -> i32 {
+        #[cfg(feature = "no_std")]
+        let mut hasher = hashbrown::hash_map::DefaultHashBuilder::default().build_hasher();
+        #[cfg(not(feature = "no_std"))]
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        x.hash(&mut hasher);
+        let h = hasher.finish();
+        ((h >> 32) ^ h) as i32
+    }
+
+    pub fn referenceHash<T>(p: &T) -> i32 {
+        getHashCode(p as *const T)
+    }
 
     pub fn compare<T: PartialOrd>(x: T, y: T) -> i32 {
         match x.partial_cmp(&y) {
@@ -95,13 +121,41 @@ pub mod Native_ {
         }
     }
 
-    pub fn makeCompare<T: Clone + 'static>(comparer: Func2<T, T, i32>) -> impl Fn(&T, &T) -> Ordering {
+    pub fn makeCompare<T: Clone + 'static>(
+        comparer: Func2<T, T, i32>,
+    ) -> impl Fn(&T, &T) -> Ordering {
         move |x, y| match comparer(x.clone(), y.clone()) {
             i if i < 0 => Ordering::Less,
             i if i > 0 => Ordering::Greater,
             _ => Ordering::Equal,
         }
     }
+
+    // -----------------------------------------------------------
+    // Fixed-point combinators
+    // -----------------------------------------------------------
+
+    macro_rules! func {
+        ($f:ident $(, $i:ident)*) => {
+            pub fn $f<$($i,)*R>(f: &dyn Fn(&dyn Fn($($i,)*) -> R, $($i,)*) -> R, $($i:$i,)*) -> R {
+                f(&|$($i:$i,)*| $f(f, $($i,)*), $($i,)*)
+            }
+        };
+    }
+
+    func!(fix0);
+    func!(fix1, T1);
+    func!(fix2, T1, T2);
+    func!(fix3, T1, T2, T3);
+    func!(fix4, T1, T2, T3, T4);
+    func!(fix5, T1, T2, T3, T4, T5);
+    func!(fix6, T1, T2, T3, T4, T5, T6);
+    func!(fix7, T1, T2, T3, T4, T5, T6, T7);
+    func!(fix8, T1, T2, T3, T4, T5, T6, T7, T8);
+    func!(fix9, T1, T2, T3, T4, T5, T6, T7, T8, T9);
+    func!(fix10, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10);
+    func!(fix11, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11);
+    func!(fix12, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12);
 
     // -----------------------------------------------------------
     // Interface casting
@@ -183,72 +237,6 @@ pub mod Native_ {
     }
 
     // -----------------------------------------------------------
-    // Arrays
-    // -----------------------------------------------------------
-
-    type MutArray<T> = MutCell<Vec<T>>;
-
-    #[repr(transparent)]
-    #[derive(Clone, Debug, Default, Eq, Hash, PartialEq, PartialOrd, Ord)]
-    pub struct Array<T: Clone>(Lrc<MutArray<T>>);
-
-    impl<T: Clone> core::ops::Deref for Array<T> {
-        type Target = Lrc<MutArray<T>>;
-        fn deref(&self) -> &Self::Target {
-            &self.0
-        }
-    }
-
-    impl<T: Clone + core::fmt::Debug> core::fmt::Display for Array<T> {
-        fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-            write!(f, "{:?}", self.0) //TODO: improve
-        }
-    }
-
-    impl<T: Clone> From<Vec<T>> for Array<T> {
-        fn from(vec: Vec<T>) -> Self {
-            arrayFrom(vec)
-        }
-    }
-
-    impl<T: Clone> From<&Vec<T>> for Array<T> {
-        fn from(vec: &Vec<T>) -> Self {
-            let vecNew: Vec<T> = vec.iter().map(|item| item.clone()).collect();
-            arrayFrom(vecNew)
-        }
-    }
-
-    impl<T: Clone> Into<Vec<T>> for Array<T> {
-        fn into(self) -> Vec<T> {
-            self.get().iter().map(|item| item.clone()).collect()
-        }
-    }
-
-    pub fn arrayFrom<T: Clone>(v: Vec<T>) -> Array<T> {
-        Array(mkRefMut(v))
-    }
-
-    pub fn array<T: Clone>(a: &[T]) -> Array<T> {
-        arrayFrom(a.to_vec())
-    }
-
-    pub fn arrayEmpty<T: Clone>() -> Array<T> {
-        arrayFrom(Vec::new())
-    }
-
-    pub fn arrayWithCapacity<T: Clone>(capacity: i32) -> Array<T> {
-        arrayFrom(Vec::with_capacity(capacity as usize))
-    }
-
-    pub fn arrayCreate<T: Clone>(value: &T, count: i32) -> Array<T> {
-        arrayFrom(alloc::vec![value.clone(); count as usize])
-    }
-
-    pub fn arrayCopy<T: Clone>(a: Array<T>) -> Array<T> {
-        arrayFrom(a.to_vec())
-    }
-
-    // -----------------------------------------------------------
     // Sequences
     // -----------------------------------------------------------
 
@@ -259,7 +247,7 @@ pub mod Native_ {
         let en = seq.GetEnumerator();
         let next = move || {
             if en.MoveNext() {
-                Some(en.Current().clone())
+                Some(en.get_Current().clone())
             } else {
                 None
             }

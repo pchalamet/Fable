@@ -578,6 +578,10 @@ val PublishTypeDefn: cenv: TcFileState -> env: TcEnv -> mspec: Tycon -> unit
 /// Publish a value definition to the module/namespace type accumulator.
 val PublishValueDefn: cenv: TcFileState -> env: TcEnv -> declKind: DeclKind -> vspec: Val -> unit
 
+/// Publish a value definition to the module/namespace type accumulator.
+val PublishValueDefnMaybeInclCompilerGenerated:
+    cenv: TcFileState -> env: TcEnv -> inclCompilerGenerated: bool -> declKind: DeclKind -> vspec: Val -> unit
+
 /// Mark a typar as no longer being an inference type variable
 val SetTyparRigid: DisplayEnv -> range -> Typar -> unit
 
@@ -852,6 +856,7 @@ val TcValSpec:
 /// giving the names and attributes relevant to arguments and return, but before type
 /// parameters have been fully inferred via generalization.
 val TranslateSynValInfo:
+    cenv: TcFileState ->
     range ->
     tcAttributes: (AttributeTargets -> SynAttribute list -> Attrib list) ->
     synValInfo: SynValInfo ->
@@ -862,7 +867,7 @@ val TranslateSynValInfo:
 val TranslatePartialValReprInfo: tps: Typar list -> PrelimValReprInfo -> ValReprInfo
 
 /// Constrain two types to be equal within this type checking context
-val UnifyTypes: cenv: TcFileState -> env: TcEnv -> m: range -> actualTy: TType -> expectedTy: TType -> unit
+val UnifyTypes: cenv: TcFileState -> env: TcEnv -> m: range -> expectedTy: TType -> actualTy: TType -> unit
 
 val TcRuntimeTypeTest:
     isCast: bool ->
@@ -892,9 +897,9 @@ val BuildFieldMap:
     env: TcEnv ->
     isPartial: bool ->
     ty: TType ->
-    ((Ident list * Ident) * 'T) list ->
+    flds: ((Ident list * Ident) * 'T) list ->
     m: range ->
-        TypeInst * TyconRef * Map<string, 'T> * (string * 'T) list
+        (TypeInst * TyconRef * Map<string, 'T> * (string * 'T) list) option
 
 /// Check a long identifier 'Case' or 'Case argsR' that has been resolved to an active pattern case
 val TcPatLongIdentActivePatternCase:

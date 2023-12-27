@@ -71,7 +71,7 @@ type Item =
     | UnionCaseField of UnionCaseInfo * fieldIndex: int
 
     /// Represents the resolution of a name to a field of an anonymous record type.
-    | AnonRecdField of AnonRecdTypeInfo * TTypes * int * range
+    | AnonRecdField of anonInfo: AnonRecdTypeInfo * tys: TTypes * fieldIndex: int * range: range
 
     // The following are never in the items table but are valid results of binding
     // an identifier in different circumstances.
@@ -86,7 +86,7 @@ type Item =
     | Event of EventInfo
 
     /// Represents the resolution of a name to a property
-    | Property of string * PropInfo list
+    | Property of name: string * info: PropInfo list * sourceIdentifierRange: range option
 
     /// Represents the resolution of a name to a group of methods.
     | MethodGroup of displayName: string * methods: MethInfo list * uninstantiatedMethodOpt: MethInfo option
@@ -122,7 +122,7 @@ type Item =
 
     /// Represents the resolution of a name to a named argument
     //
-    // In the FCS API, Item.ArgName corresponds to FSharpParameter symbols.
+    // In the FCS API, Item.OtherName corresponds to FSharpParameter symbols.
     // Not all parameters have names, e.g. for 'g' in this:
     //
     //    let f (g: int -> int) x = ...
@@ -131,7 +131,12 @@ type Item =
     // based on analyzing the type of g as a function type.
     //
     // For these parameters, the identifier will be missing.
-    | ArgName of ident: Ident option * argType: TType * container: ArgumentContainer option * range: range
+    | OtherName of
+        ident: Ident option *
+        argType: TType *
+        argInfo: ArgReprInfo option *
+        container: ArgumentContainer option *
+        range: range
 
     /// Represents the resolution of a name to a named property setter
     | SetterArg of Ident * Item
@@ -241,6 +246,13 @@ type NameResolutionEnv =
 type FullyQualifiedFlag =
     | FullyQualified
     | OpenQualified
+
+/// Indicates whether an identifier (single or long) is followed by an extra dot. Typically used
+/// to provide better tooling and error reporting.
+[<RequireQualifiedAccess>]
+type ExtraDotAfterIdentifier =
+    | Yes
+    | No
 
 [<RequireQualifiedAccess>]
 type BulkAdd =
@@ -586,6 +598,12 @@ type AfterResolution =
         (MethInfo * PropInfo option * TyparInstantiation -> unit) *
         (unit -> unit)
 
+/// Indicates whether we want to report found items to the name resolution sink
+[<RequireQualifiedAccess>]
+type ShouldNotifySink =
+    | Yes
+    | No
+
 /// Temporarily redirect reporting of name resolution and type checking results
 val internal WithNewTypecheckResultsSink: ITypecheckResultsSink * TcResultsSink -> System.IDisposable
 
@@ -672,6 +690,7 @@ val internal ResolveLongIdentAsModuleOrNamespace:
     id: Ident ->
     rest: Ident list ->
     isOpenDecl: bool ->
+    notifySink: ShouldNotifySink ->
         ResultOrException<(int * ModuleOrNamespaceRef * ModuleOrNamespaceType) list>
 
 /// Resolve a long identifier to an object constructor.
@@ -703,6 +722,7 @@ val internal ResolvePatternLongIdent:
     nenv: NameResolutionEnv ->
     numTyArgsOpt: TypeNameResolutionInfo ->
     lid: Ident list ->
+    extraDotAtTheEnd: ExtraDotAfterIdentifier ->
         Item
 
 /// Resolve a long identifier representing a type name
@@ -742,6 +762,16 @@ val internal ResolveField:
     allFields: Ident list ->
         FieldResolution list
 
+/// Resolve a long identifier to a nested field
+val internal ResolveNestedField:
+    sink: TcResultsSink ->
+    ncenv: NameResolver ->
+    nenv: NameResolutionEnv ->
+    ad: AccessorDomain ->
+    recdTy: TType ->
+    lid: Ident list ->
+        Ident list * (Ident * Item) list
+
 /// Resolve a long identifier occurring in an expression position
 val internal ResolveExprLongIdent:
     sink: TcResultsSink ->
@@ -751,6 +781,7 @@ val internal ResolveExprLongIdent:
     nenv: NameResolutionEnv ->
     typeNameResInfo: TypeNameResolutionInfo ->
     lid: Ident list ->
+    maybeAppliedArgExpr: SynExpr option ->
         ResultOrException<EnclosingTypeInst * Item * Ident list>
 
 val internal getRecordFieldsInScope: NameResolutionEnv -> Item list
@@ -771,6 +802,7 @@ val internal ResolveLongIdentAsExprAndComputeRange:
     nenv: NameResolutionEnv ->
     typeNameResInfo: TypeNameResolutionInfo ->
     lid: Ident list ->
+    maybeAppliedArgExpr: SynExpr option ->
         ResultOrException<EnclosingTypeInst * Item * range * Ident list * AfterResolution>
 
 /// Resolve a long identifier occurring in an expression position, qualified by a type.
@@ -785,6 +817,7 @@ val internal ResolveExprDotLongIdentAndComputeRange:
     typeNameResInfo: TypeNameResolutionInfo ->
     findFlag: FindMemberFlag ->
     staticOnly: bool ->
+    maybeAppliedArgExpr: SynExpr option ->
         Item * range * Ident list * AfterResolution
 
 /// A generator of type instantiations used when no more specific type instantiation is known.

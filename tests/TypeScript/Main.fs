@@ -5,14 +5,14 @@ open Fable.Tests
 
 let allTests =
   [|
-    // UtilTests.tests
+    UtilTests.tests
     Applicative.tests
     Arithmetic.tests
     Arrays.tests
     Async.tests
     Chars.tests
-    // Comparison.tests
-    // Convert.tests
+    Comparison.tests
+    Convert.tests
     CustomOperators.tests
     DateTimeOffset.tests
     DateTime.tests
@@ -23,18 +23,19 @@ let allTests =
 #endif
     Enumerable.tests
     Enum.tests
-    // Event.tests
+    Event.tests
     HashSets.tests
     // Import.tests
     // JsInterop.tests
     Lists.tests
     Maps.tests
     Misc.tests
+    NestedAndRecursivePatternTests.tests
     Observable.tests
     Option.tests
     Queue.tests
     RecordTypes.tests
-    // Reflection.tests
+    Reflection.tests
     Regex.tests
     ResizeArrays.tests
     Result.tests
@@ -48,7 +49,7 @@ let allTests =
     TimeOnly.tests
     TimeSpan.tests
     TupleTypes.tests
-    // TypeTests.tests
+    TypeTests.tests
     UnionTypes.tests
     Uri.tests
   |]
@@ -94,6 +95,6 @@ open Expecto
 let main args =
     Array.toList allTests
     |> testList "All"
-    |> runTestsWithArgs defaultConfig args
+    |> runTestsWithCLIArgs [] args
 
 #endif

@@ -28,6 +28,7 @@ let allTests =
     Lists.tests
     Maps.tests
     Misc.tests
+    NestedAndRecursivePatternTests.tests
     Observable.tests
     Option.tests
     Queue.tests
@@ -87,6 +88,6 @@ open Expecto
 let main args =
     Array.toList allTests
     |> testList "All"
-    |> runTestsWithArgs defaultConfig args
+    |> runTestsWithCLIArgs [] args
 
 #endif

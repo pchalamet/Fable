@@ -17,7 +17,7 @@ export function parse(str: string): number {
   if (tryParse(str, defValue)) {
     return defValue.contents;
   } else {
-    throw new Error("Input string was not in a correct format.");
+    throw new Error(`The input string ${str} was not in a correct format.`);
   }
 }
 
@@ -32,4 +32,24 @@ export function isNegativeInfinity(x: number) {
 
 export function isInfinity(x: number) {
   return x === Number.POSITIVE_INFINITY || x === Number.NEGATIVE_INFINITY;
+}
+
+export function max(x: number, y: number): number {
+  return x > y ? x : y;
+}
+
+export function min(x: number, y: number): number {
+  return x < y ? x : y;
+}
+
+export function maxMagnitude(x: number, y: number): number {
+  return Math.abs(x) > Math.abs(y) ? x : y;
+}
+
+export function minMagnitude(x: number, y: number): number {
+  return Math.abs(x) < Math.abs(y) ? x : y;
+}
+
+export function clamp(x: number, min: number, max: number): number {
+  return x < min ? min : x > max ? max : x;
 }

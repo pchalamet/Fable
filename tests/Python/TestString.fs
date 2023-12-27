@@ -7,6 +7,15 @@ open Util.Testing
 
 #nowarn "44" // This construct is deprecated. Uri.EscapeUriString can corrupt the Uri string in some cases. (code 44)
 
+[<Literal>]
+let formatCoordinateBody = "(%f,%f)"
+
+[<Literal>]
+let formatPrefix = "Person at coordinates"
+
+[<Literal>]
+let fullFormat = formatPrefix + formatCoordinateBody
+
 let containsInOrder (substrings: string list) (str: string) =
     let mutable lastIndex = -1
     substrings |> List.forall (fun s ->
@@ -52,6 +61,14 @@ let ``test sprintf displays sign correctly`` () =
       sprintf "%.2f" -1. |> equal "-1.00"
 
 [<Fact>]
+let ``test format string can use and compose string literals`` =
+    let renderedCoordinates = sprintf formatCoordinateBody 0.25 0.75
+    let renderedText = sprintf fullFormat 0.25 0.75
+
+    equal "(0.250000,0.750000)" renderedCoordinates
+    equal "Person at coordinates(0.250000,0.750000)" renderedText
+
+[<Fact>]
 let ``test Print.sprintf works`` () =
     let res = Printf.sprintf "%s" "abc"
     equal "res: abc" ("res: " + res)
@@ -91,6 +108,12 @@ let ``test string interpolation works with anonymous records`` () =
            Country = "The United Kingdom" |}
     $"Hi! My name is %s{person.Name} %s{person.Surname.ToUpper()}. I'm %i{person.Age} years old and I'm from %s{person.Country}!"
     |> equal "Hi! My name is John DOE. I'm 32 years old and I'm from The United Kingdom!"
+
+[<Fact>]
+let ``test Extended string interpolation syntax`` =
+    let classAttr = "item-panel"
+    let cssNew = $$""".{{classAttr}}:hover {background-color: #eee;}"""
+    cssNew |> equal ".item-panel:hover {background-color: #eee;}"
 
 [<Fact>]
 let ``test sprintf \"%A\" with lists works`` () =
@@ -467,6 +490,7 @@ let ``test String.IndexOfAny works`` () =
     "abcdbcebc".IndexOfAny([|'f';'e'|]) |> equal 6
     "abcdbcebc".IndexOfAny([|'f';'e'|], 2) |> equal 6
     "abcdbcebc".IndexOfAny([|'f';'e'|], 2, 4) |> equal -1
+    "abcdbcebc".IndexOfAny([|'c';'b'|]) |> equal 1
 
 [<Fact>]
 let ``test String.StartsWith works`` () =
@@ -861,3 +885,13 @@ let ``test Can create FormattableString`` () =
 //    let s3: FormattableString = $"""I have no holes"""
 //    s3.GetStrings() |> equal [|"I have no holes"|]
 #endif
+
+[<Fact>]
+let ``test printing strings with unicode characters`` () =
+    printfn "🚀 printing unicode ..."
+
+[<Fact>]
+let ``test calling ToString(CultureInfo.InvariantCulture) works`` () =
+    (1).ToString(CultureInfo.InvariantCulture) |> equal "1"
+    (7923209L).ToString(CultureInfo.InvariantCulture) |> equal "7923209"
+    (7923209UL).ToString(CultureInfo.InvariantCulture) |> equal "7923209"

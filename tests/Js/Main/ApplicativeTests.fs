@@ -804,7 +804,6 @@ module CurriedApplicative =
             let r = Some f <*> Some 2 <*> Some 3
             r |> equal (Some 5)
 
-        // TODO: Add tests with side-effects
         testCase "Currying/uncurrying works" <| fun () ->
             let addLocal x y z u v = x + y + z + u + v
             let f1 = changeArity addModule5 2
@@ -1047,6 +1046,33 @@ type Const<'t,'u> = Const of 't with
     static member run (Const a) = a
 
 let tests7 = [
+    testCase "Currying/uncurrying works with imported functions" <| fun () -> // See #3397
+        let r1 = apply3 Util.curriedAdder 4 5 6
+        let r2 = apply3 Util.curriedAdder 5 6 7
+        r1.result |> equal 16
+        r2.result |> equal 19
+        let r1 = apply3 Util.curriedAdder2 4 5 6
+        let r2 = apply3 Util.curriedAdder2 5 6 7
+        r1.result |> equal 16
+        r2.result |> equal 19
+
+    testCase "Ident of uncurried inner lambdas is uncurried too" <| fun () -> // See #3415
+        let copy1 xs =
+            let copySnd x y = x + y
+            ignore copySnd // just to prevent inlining
+            copySnd 3 xs |> id
+
+        // copySnd is hoisted in release mode
+        let copy2 xs =
+            let copy x =
+                let copySnd x y = x + y
+                ignore copySnd // just to prevent inlining
+                copySnd 3 x
+            copy xs |> id
+
+        copy1 5 |> equal 8
+        copy2 5 |> equal 8
+
     testCase "SRTP with ActivePattern works" <| fun () ->
         (lengthWrapper []) |> equal 0
         (lengthWrapper [1;2;3;4]) |> equal 4
@@ -1706,6 +1732,53 @@ module MultipleInlines =
             NonEmptyList("a", ["b"; "c"]) |> mapMyList |> equal (NonEmptyList("a_", ["b_"; "c_"]))
     ]
 
+module AccessorFunctionShorthand =
+
+    type User =
+        {
+            Name : string
+        }
+
+    type Student =
+        {
+            Name : string
+            Age : int
+        }
+
+    let inline namePropertyGetter<'a when 'a:(member Name: string)> (x: 'a) = x |> _.Name
+
+    let tests =
+        [
+            testCase "Accessor function shorthand works for records" <| fun () ->
+                let people =
+                    [
+                        { Name = "John" }
+                        { Name = "Jane" }
+                    ]
+
+                let names = people |> List.map _.Name
+                equal names ["John"; "Jane"]
+
+            testCase "Accessor function shorthand works for anonymous records" <| fun () ->
+                let people =
+                    [
+                        {| Name = "John" |}
+                        {| Name = "Jane" |}
+                    ]
+
+                let names = people |> List.map _.Name
+                equal names ["John"; "Jane"]
+
+            testCase "Accessor function shorthand works with STRP syntax" <| fun () ->
+                let user =
+                    { Name = "John" }
+                let student =
+                    { Name = "Jane"; Age = 20 }
+
+                equal (namePropertyGetter user) "John"
+                equal (namePropertyGetter student) "Jane"
+        ]
+
 let tests =
     testList "Applicative" (
         tests1
@@ -1719,4 +1792,5 @@ let tests =
         @ Curry.tests
         @ Uncurry.tests
         @ MultipleInlines.tests
+        @ AccessorFunctionShorthand.tests
     )

@@ -1,9 +1,24 @@
 import math
-
 from math import copysign
 from typing import Any
 
 from .types import FSharpRef
+
+
+def abs(x: float) -> float:
+    return -x if x < 0 else x
+
+
+def sign(x: float) -> float:
+    return -1 if x < 0 else 1 if x > 0 else 0
+
+
+def max(x: float, y: float) -> float:
+    return x if x > y else y
+
+
+def min(x: float, y: float) -> float:
+    return x if x < y else y
 
 
 def divide(x: float, y: float) -> float:
@@ -42,7 +57,7 @@ def parse(value: Any) -> float:
     try:
         return float(value)
     except Exception:
-        raise ValueError("Input string was not in a correct format.")
+        raise ValueError(f"The input string {value} was not in a correct format.")
 
 
 def try_parse(string: str, def_value: FSharpRef[float]) -> bool:
@@ -53,4 +68,4 @@ def try_parse(string: str, def_value: FSharpRef[float]) -> bool:
         return False
 
 
-__all__ = ["parse", "try_parse", "divide", "log", "sqrt", "is_negative_inf"]
+__all__ = ["abs", "sign", "max", "min", "parse", "try_parse", "divide", "log", "sqrt", "is_negative_inf"]

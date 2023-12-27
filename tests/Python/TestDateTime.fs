@@ -18,7 +18,7 @@ let thatYearMilliseconds (dt: DateTime) =
     (dt - DateTime(dt.Year, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalMilliseconds
 
 [<Fact>]
-let ``test DateTime.ToString with format works`` () =
+let ``test DateTime.ToString with custom format works`` () =
     DateTime(2014, 9, 11, 16, 37, 0).ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture)
     |> equal "16:37"
 
@@ -32,12 +32,14 @@ let ``test DateTime.ToString with milliseconds`` () =
     DateTime(2014, 9, 11, 16, 37, 11, 345).ToString("ss.fff")
     |> equal "11.345"
 
-// FIXME: missing regex module
-// [<Fact>]
-// let ``test DateTime.ToString with Round-trip format works for Utc`` () =
-//     let str = DateTime(2014, 9, 11, 16, 37, 2, DateTimeKind.Utc).ToString("O")
-//     System.Text.RegularExpressions.Regex.Replace(str, "0{3,}", "000")
-//     |> equal "2014-09-11T16:37:02.000Z"
+[<Fact>]
+let ``test DateTime.ToString with Round-trip format works for Utc`` () =
+    let str = DateTime(2014, 9, 11, 16, 37, 2, DateTimeKind.Utc).ToString("O")
+    // FIXME: missing regex module
+    // System.Text.RegularExpressions.Regex.Replace(str, "0{3,}", "000")
+    // Hardcode the replace string so we can test that "O" format is supported
+    str.Replace("0000000Z", "000000Z")
+    |> equal "2014-09-11T16:37:02.000000Z"
 
 [<Fact>]
 let ``test DateTime from Year 1 to 99 works`` () =
@@ -71,6 +73,33 @@ let ``test DateTime.MinValue works in pattern match`` () =
     match d1 with
     | Some date when date <> DateTime.MinValue -> ()
     | _ -> failwith "expected pattern match above"
+
+[<Fact>]
+let ``test DateTime Subtraction with TimeSpan works`` () =
+    let test ms expected =
+        let dt = DateTime(2014,9,12,0,0,0,DateTimeKind.Utc)
+        let ts = TimeSpan.FromMilliseconds(ms)
+        let res1 = dt.Subtract(ts) |> thatYearSeconds
+        let res2 = (dt - ts) |> thatYearSeconds
+        equal true (res1 = res2)
+        equal expected res1
+    test 1000. 21945599.0
+    test -1000. 21945601.0
+    test 0. 21945600.0
+
+[<Fact>]
+let ``test DateTime Subtraction with DateTime works`` () =
+    let test ms expected =
+        let dt1 = DateTime(2014, 10, 9, 13, 23, 30, 234, DateTimeKind.Utc)
+        let dt2 = dt1.AddMilliseconds(ms)
+        let res1 = dt1.Subtract(dt2).TotalSeconds
+        let res2 = (dt1 - dt2).TotalSeconds
+        equal true (res1 = res2)
+        equal expected res1
+    test 1000. -1.0
+    test -1000. 1.0
+    test 0. 0.0
+
 
 // [<Fact>]
 // let ``test DateTime.ToLocalTime works`` () =
